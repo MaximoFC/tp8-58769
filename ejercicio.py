@@ -182,7 +182,7 @@ def main():
                     unsafe_allow_html=True
                 )
                 
-                col1, col2 = st.columns([2, 3])
+                col1, col2 = st.columns([1, 3])
                 
                 with col1:
                     #Precio Promedio
@@ -215,12 +215,12 @@ def main():
                         ),
                         unsafe_allow_html=True
                     )
-
-                #Gráfico
-                with col2:
-                    graficarVentas(datos, row['Producto'])
                 
-                st.markdown("</div>", unsafe_allow_html=True)
+                with col2:
+                    #Gráfico
+                    graficarVentas(datos, row['Producto'])
 
+                st.markdown("</div>", unsafe_allow_html=True)
+                
 if __name__ == "__main__":
     main()
