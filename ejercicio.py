@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
+
 st.set_page_config(page_title="Análisis de Ventas", layout="wide")
 
 
@@ -21,6 +22,7 @@ def cargarDatos():
     if uploaded_file:
         try:
             data = pd.read_csv(uploaded_file)
+            data['Orden_original'] = data.index
             st.sidebar.success("Datos cargados correctamente")
             return data
         except Exception as e:
@@ -30,12 +32,13 @@ def cargarDatos():
 
 
 def calcularMetricas(data):
-    data['Fecha'] = data['Año'].astype(str) + "-" + data['Mes'].astype(str)
-    data['Fecha'] = pd.to_datetime(data['Fecha'], format="%Y-%m")
+    data['Fecha'] = pd.to_datetime(data['Año'].astype(str) + "-" + data['Mes'].astype(str), format="%Y-%m")
     data['Precio_promedio'] = np.round(data['Ingreso_total'] / data['Unidades_vendidas'])
     data['Margen_promedio'] = (data['Ingreso_total'] - data['Costo_total']) / data['Ingreso_total']
-    data['Año'] = data['Fecha'].dt.year
-    resumen_anual = data.groupby(['Producto', 'Año']).agg({
+
+    data = data.sort_values('Orden_original')
+
+    resumen_anual = data.groupby(['Producto', 'Año'], group_keys=False).agg({
         'Unidades_vendidas': 'sum',
         'Ingreso_total': 'sum',
         'Costo_total': 'sum',
@@ -46,9 +49,7 @@ def calcularMetricas(data):
     variaciones = []
 
     for producto in data['Producto'].unique():
-        producto_data = resumen_anual[resumen_anual['Producto'] == producto]
-        producto_data = producto_data.sort_values('Año')
-
+        producto_data = resumen_anual[resumen_anual['Producto'] == producto].sort_values('Año')
         if len(producto_data['Año'].unique()) < 2:
             variaciones.append({
                 'Producto': producto,
@@ -84,7 +85,8 @@ def calcularMetricas(data):
             'Variacion_unidades': promedio_unidades
         })
     variaciones_df = pd.DataFrame(variaciones)
-    resumen = resumen_anual.groupby('Producto').agg({
+
+    resumen = resumen_anual.groupby('Producto', group_keys=False).agg({
         'Unidades_vendidas': 'sum',
         'Ingreso_total': 'sum',
         'Costo_total': 'sum',
@@ -92,7 +94,9 @@ def calcularMetricas(data):
         'Margen_promedio': 'mean'
     }).reset_index()
     resumen = resumen.merge(variaciones_df, on='Producto', how='left')
-    
+    resumen = resumen.set_index('Producto')
+    resumen = resumen.loc[data['Producto'].unique()].reset_index()
+
     return resumen
 
 
@@ -103,7 +107,7 @@ def graficarVentas(data, producto):
     plt.figure(figsize=(8, 4))
     plt.plot(producto_data['Fecha'], producto_data['Unidades_vendidas'], label=producto, linestyle='-', linewidth=2)
 
-    z = np.polyfit(np.arange(len(producto_data)), producto_data['Unidades_vendidas'], 1)  # Ajuste lineal
+    z = np.polyfit(np.arange(len(producto_data)), producto_data['Unidades_vendidas'], 1)
     p = np.poly1d(z)
 
     plt.plot(producto_data['Fecha'], p(np.arange(len(producto_data))), "r--", label="Tendencia", linewidth=2)
@@ -139,19 +143,19 @@ def main():
                 st.subheader(f"{row['Producto']}")
                 col1, col2 = st.columns([1, 3])
                 with col1:
-                    #Precio promedio
+                    # Precio promedio
                     st.metric(
                         label="Precio Promedio", 
                         value=f"${int(row['Precio_promedio']):,}", 
                         delta=f"{row['Variacion_precio']:+.2f}%"
                     )
-                    #Margen promedio
+                    # Margen promedio
                     st.metric(
                         label="Margen Promedio", 
                         value=f"{int(row['Margen_promedio'] * 100)}%",
                         delta=f"{row['Variacion_margen']:+.2f}%"
                     )
-                    #Unidades vendidas
+                    # Unidades vendidas
                     st.metric(
                         label="Unidades Vendidas", 
                         value=f"{row['Unidades_vendidas']:,}",
