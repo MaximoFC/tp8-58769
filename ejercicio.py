@@ -42,7 +42,7 @@ def calcularMetricas(data):
         'Unidades_vendidas': 'sum',
         'Ingreso_total': 'sum',
         'Costo_total': 'sum',
-        'Precio_promedio': lambda x: int(np.round(np.mean(x))),
+        'Precio_promedio': 'mean',
         'Margen_promedio': 'mean'
     }).reset_index()
 
@@ -152,7 +152,7 @@ def main():
                     # Margen promedio
                     st.metric(
                         label="Margen Promedio", 
-                        value=f"{int(row['Margen_promedio'] * 100)}%",
+                        value=f"{np.round(row['Margen_promedio'] * 100)}%",
                         delta=f"{row['Variacion_margen']:+.2f}%"
                     )
                     # Unidades vendidas
